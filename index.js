@@ -1,7 +1,7 @@
 const inquirer = require('inquirer');
 const db = require('./db/db');
 
-// Define the main menu options and their corresponding functions
+// Define main menu options and their corresponding functions
 const menuOptions = {
     'View all departments': viewAllDepartments,
     'View all roles': viewAllRoles,
@@ -9,7 +9,7 @@ const menuOptions = {
     'Add a department': addDepartment,
     'Add a role': addRole,
     'Add an employee': addEmployee,
-    'Update an employee role': updateEmployeeRole,
+    'Update an employee role': updateEmployeeRole, //TODO
     'Exit': () => process.exit()
 };
 
@@ -86,6 +86,50 @@ const addRole = async () => {
 
     await db.query('INSERT INTO role (title, salary, department_id) VALUES ($1, $2, $3)', [title, salary, department_id]);
     console.log(`Added role: ${title}`);
+};
+
+// Add an employee
+const addEmployee = async () => {
+    const roles = await db.query('SELECT * FROM role');
+    const roleChoices = roles.rows.map(({ id, title }) => ({
+        name: title,
+        value: id
+    }));
+
+    const employees = await db.query('SELECT * FROM employee');
+    const managerChoices = employees.rows.map(({ id, first_name, last_name }) => ({
+        name: `${first_name} ${last_name}`,
+        value: id
+    }));
+    managerChoices.push({ name: 'None', value: null });
+
+    const { first_name, last_name, role_id, manager_id } = await inquirer.prompt([
+        {
+            name: 'first_name',
+            type: 'input',
+            message: 'Enter the first name of the employee:'
+        },
+        {
+            name: 'last_name',
+            type: 'input',
+            message: 'Enter the last name of the employee:'
+        },
+        {
+            name: 'role_id',
+            type: 'list',
+            message: 'Select the role:',
+            choices: roleChoices
+        },
+        {
+            name: 'manager_id',
+            type: 'list',
+            message: 'Select the manager:',
+            choices: managerChoices
+        }
+    ]);
+
+    await db.query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ($1, $2, $3, $4)', [first_name, last_name, role_id, manager_id]);
+    console.log(`Added employee: ${first_name} ${last_name}`);
 };
 
 
