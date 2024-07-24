@@ -142,7 +142,7 @@ const updateEmployeeRole = async () => {
         value: id
     }));
 
-    const { employee_id, role_id, self_managed } = await inquirer.prompt([
+    const { employee_id, role_id } = await inquirer.prompt([
         {
             name: 'employee_id',
             type: 'list',
@@ -154,22 +154,42 @@ const updateEmployeeRole = async () => {
             type: 'list',
             message: 'Select the new role:',
             choices: roleChoices
-        },
-        {
-            name: 'self_managed',
-            type: 'confirm',
-            message: 'Do you want to set this employee as their own manager?',
-            default: false
         }
     ]);
 
+    // Update the employee's role
     await db.query('UPDATE employee SET role_id = $1 WHERE id = $2', [role_id, employee_id]);
-    
-    if (self_managed) {
-        await db.query('UPDATE employee SET manager_id = $1 WHERE id = $2', [employee_id, employee_id]);
-        console.log(`Updated employee role and set ${employee_id} as their own manager.`);
+
+    // Prompt to select a manager
+    const { manager_id } = await inquirer.prompt([
+        {
+            name: 'manager_id',
+            type: 'list',
+            message: 'Select the manager:',
+            choices: [...employeeChoices, { name: 'None', value: null }]
+        }
+    ]);
+
+    if (manager_id === null) {
+        const { self_managed } = await inquirer.prompt([
+            {
+                name: 'self_managed',
+                type: 'confirm',
+                message: 'Do you want this employee to be their own manager?',
+                default: false
+            }
+        ]);
+        
+        if (self_managed) {
+            await db.query('UPDATE employee SET manager_id = $1 WHERE id = $2', [employee_id, employee_id]);
+            console.log(`Updated employee role and set ${employee_id} as their own manager.`);
+        } else {
+            await db.query('UPDATE employee SET manager_id = NULL WHERE id = $1', [employee_id]);
+            console.log(`Updated employee role without setting a manager.`);
+        }
     } else {
-        console.log(`Updated employee role.`);
+        await db.query('UPDATE employee SET manager_id = $1 WHERE id = $2', [manager_id, employee_id]);
+        console.log(`Updated employee role and set manager to ${manager_id}.`);
     }
 };
 
