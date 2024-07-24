@@ -88,7 +88,7 @@ const addRole = async () => {
     console.log(`Added role: ${title}`);
 };
 
-// Add an employee
+// Function to add an employee
 const addEmployee = async () => {
     const roles = await db.query('SELECT * FROM role');
     const roleChoices = roles.rows.map(({ id, title }) => ({
@@ -132,7 +132,38 @@ const addEmployee = async () => {
     console.log(`Added employee: ${first_name} ${last_name}`);
 };
 
+// Update an employee's role
+const updateEmployeeRole = async () => {
+    const employees = await db.query('SELECT * FROM employee');
+    const employeeChoices = employees.rows.map(({ id, first_name, last_name }) => ({
+        name: `${first_name} ${last_name}`,
+        value: id
+    }));
 
+    const roles = await db.query('SELECT * FROM role');
+    const roleChoices = roles.rows.map(({ id, title }) => ({
+        name: title,
+        value: id
+    }));
+
+    const { employee_id, role_id } = await inquirer.prompt([
+        {
+            name: 'employee_id',
+            type: 'list',
+            message: 'Select the employee to update:',
+            choices: employeeChoices
+        },
+        {
+            name: 'role_id',
+            type: 'list',
+            message: 'Select the new role:',
+            choices: roleChoices
+        }
+    ]);
+
+    await db.query('UPDATE employee SET role_id = $1 WHERE id = $2', [role_id, employee_id]);
+    console.log(`Updated employee role.`);
+};
 
 // start the application
 mainMenu();
