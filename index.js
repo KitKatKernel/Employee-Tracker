@@ -1,32 +1,6 @@
 const inquirer = require('inquirer');
 const db = require('./db/db');
 
-// Define main menu options and their corresponding functions
-const menuOptions = {
-    'View all departments': viewAllDepartments,
-    'View all roles': viewAllRoles,
-    'View all employees': viewAllEmployees,
-    'Add a department': addDepartment,
-    'Add a role': addRole,
-    'Add an employee': addEmployee,
-    'Update an employee role': updateEmployeeRole, //TODO
-    'Exit': () => process.exit()
-};
-
-// Main menu function
-const mainMenu = async () => {
-    const { action } = await inquirer.prompt({
-        name: 'action',
-        type: 'list',
-        message: 'What would you like to do?',
-        choices: Object.keys(menuOptions)
-    });
-
-    // Calls the action function
-    await menuOptions[action]();
-    mainMenu(); // Return to the main menu after the action is completed
-};
-
 // view all departments
 const viewAllDepartments = async () => {
     const res = await db.query('SELECT * FROM department');
@@ -132,7 +106,7 @@ const addEmployee = async () => {
     console.log(`Added employee: ${first_name} ${last_name}`);
 };
 
-// Update an employee's role
+// Function to update an employee's role
 const updateEmployeeRole = async () => {
     const employees = await db.query('SELECT * FROM employee');
     const employeeChoices = employees.rows.map(({ id, first_name, last_name }) => ({
@@ -165,5 +139,31 @@ const updateEmployeeRole = async () => {
     console.log(`Updated employee role.`);
 };
 
-// start the application
+// Define main menu options and their corresponding functions
+const menuOptions = {
+    'View all departments': viewAllDepartments,
+    'View all roles': viewAllRoles,
+    'View all employees': viewAllEmployees,
+    'Add a department': addDepartment,
+    'Add a role': addRole,
+    'Add an employee': addEmployee,
+    'Update an employee role': updateEmployeeRole,
+    'Exit': () => process.exit()
+};
+
+// Main menu function
+const mainMenu = async () => {
+    const { action } = await inquirer.prompt({
+        name: 'action',
+        type: 'list',
+        message: 'What would you like to do?',
+        choices: Object.keys(menuOptions)
+    });
+
+    // Calls the action function
+    await menuOptions[action]();
+    mainMenu(); // Return to the main menu after the action is completed
+};
+
+// Start the application
 mainMenu();
