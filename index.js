@@ -75,6 +75,7 @@ const addEmployee = async () => {
         name: `${first_name} ${last_name}`,
         value: id
     }));
+    // Add a placeholder for "None" option
     managerChoices.push({ name: 'None', value: null });
 
     const { first_name, last_name, role_id, manager_id } = await inquirer.prompt([
@@ -97,14 +98,35 @@ const addEmployee = async () => {
         {
             name: 'manager_id',
             type: 'list',
-            message: 'Select the manager:',
+            message: 'Select the manager (You can select None initially and update later to be self-managed):',
             choices: managerChoices
         }
     ]);
 
-    await db.query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ($1, $2, $3, $4)', [first_name, last_name, role_id, manager_id]);
+    // insert employee into the database
+    const res = await db.query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ($1, $2, $3, $4) RETURNING id', [first_name, last_name, role_id, manager_id]);
+    const employeeId = res.rows[0].id;
+    
+    // If self manager then update the manager_id to the employee's own ID
+    if (manager_id === null) {
+        const { self_managed } = await inquirer.prompt([
+            {
+                name: 'self_managed',
+                type: 'confirm',
+                message: 'Is this employee their own manager?',
+                default: false
+            }
+        ]);
+        
+        if (self_managed) {
+            await db.query('UPDATE employee SET manager_id = $1 WHERE id = $2', [employeeId, employeeId]);
+            console.log(`${first_name} ${last_name} is now their own manager.`);
+        }
+    }
+
     console.log(`Added employee: ${first_name} ${last_name}`);
 };
+
 
 // Function to update an employee's role
 const updateEmployeeRole = async () => {
@@ -120,7 +142,7 @@ const updateEmployeeRole = async () => {
         value: id
     }));
 
-    const { employee_id, role_id } = await inquirer.prompt([
+    const { employee_id, role_id, self_managed } = await inquirer.prompt([
         {
             name: 'employee_id',
             type: 'list',
@@ -132,12 +154,25 @@ const updateEmployeeRole = async () => {
             type: 'list',
             message: 'Select the new role:',
             choices: roleChoices
+        },
+        {
+            name: 'self_managed',
+            type: 'confirm',
+            message: 'Do you want to set this employee as their own manager?',
+            default: false
         }
     ]);
 
     await db.query('UPDATE employee SET role_id = $1 WHERE id = $2', [role_id, employee_id]);
-    console.log(`Updated employee role.`);
+    
+    if (self_managed) {
+        await db.query('UPDATE employee SET manager_id = $1 WHERE id = $2', [employee_id, employee_id]);
+        console.log(`Updated employee role and set ${employee_id} as their own manager.`);
+    } else {
+        console.log(`Updated employee role.`);
+    }
 };
+
 
 // Define main menu options and their corresponding functions
 const menuOptions = {
